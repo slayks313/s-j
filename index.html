@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прыгающий куб</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; text-align: center; }
+        canvas { display: block; }
+        .menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0, 0, 0, 0.7); padding: 20px; border-radius: 10px; color: white; }
+        .menu button { font-size: 20px; padding: 10px 20px; margin: 10px; cursor: pointer; border: none; background: #28a745; color: white; border-radius: 5px; }
+        .menu button:hover { background: #218838; }
+        .hidden { display: none; }
+        .update-info { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.5); color: white; padding: 5px 10px; border-radius: 5px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="update-info">Обновление 1.1</div>
+    <div class="menu" id="mainMenu">
+        <h1>Square jump</h1>
+        <button onclick="startGame()">Играть</button>
+    </div>
+    <canvas id="gameCanvas" class="hidden"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const background = new Image();
+        background.src = "https://kartinki.pics/uploads/posts/2021-03/thumbs/1616042213_25-p-pikselnii-fon-dlya-igri-27.png";
+        let backgroundX = 0;
+        let backgroundSpeed = 1;
+
+        const platformTexture = new Image();
+        platformTexture.src = "https://habrastorage.org/files/b06/72b/f5a/b0672bf5a53a46a3b453523ef4de09cc.png";
+
+        const cube = { x: 100, y: 300, size: 30, velocityY: 0, gravity: 0.5, jumpPower: -10, onGround: false, doubleJump: true };
+        let platforms = [];
+        let platformSpeed = 3;
+        let lastPlatformX = 200;
+        let particles = [];
+
+        function startGame() {
+            document.getElementById('mainMenu').classList.add('hidden');
+            canvas.classList.remove('hidden');
+            gameRunning = true;
+            platforms = [{ x: 100, y: 400, width: 300, height: 30 }];
+            for (let i = 1; i < 5; i++) {
+                addPlatform();
+            }
+            gameLoop();
+        }
+
+        function addPlatform() {
+            let lastPlatform = platforms[platforms.length - 1];
+            let newWidth = Math.random() * 100 + 100;
+            let newHeight = lastPlatform.y + (Math.random() * 100 - 50);
+            newHeight = Math.max(100, Math.min(canvas.height - 100, newHeight));
+            let newX = lastPlatform.x + lastPlatform.width + Math.random() * 50 + 50;
+            platforms.push({ x: newX, y: newHeight, width: newWidth, height: 30 });
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            backgroundX -= backgroundSpeed;
+            if (backgroundX <= -canvas.width) {
+                backgroundX = 0;
+            }
+            ctx.drawImage(background, backgroundX, 0, canvas.width, canvas.height);
+            ctx.drawImage(background, backgroundX + canvas.width, 0, canvas.width, canvas.height);
+            
+            cube.velocityY += cube.gravity;
+            cube.y += cube.velocityY;
+
+            if (cube.y > canvas.height) {
+                gameRunning = false;
+                alert('Игра окончена!');
+                location.reload();
+            }
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
+            
+            for (let i = 0; i < platforms.length; i++) {
+                let p = platforms[i];
+                p.x -= platformSpeed;
+                if (p.x + p.width < 0) {
+                    platforms.splice(i, 1);
+                    i--;
+                    addPlatform();
+                }
+                ctx.drawImage(platformTexture, p.x, p.y, p.width, p.height);
+                if (cube.y + cube.size > p.y && cube.y + cube.size - cube.velocityY <= p.y && cube.x + cube.size > p.x && cube.x < p.x + p.width) {
+                    cube.onGround = true;
+                    cube.velocityY = 0;
+                    cube.y = p.y - cube.size;
+                    cube.doubleJump = true;
+                }
+            }
+
+            for (let i = 0; i < particles.length; i++) {
+                let particle = particles[i];
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = 'yellow';
+                ctx.fill();
+            }
+            particles = [];
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function jump() {
+            if (cube.onGround) {
+                cube.velocityY = cube.jumpPower;
+                cube.onGround = false;
+            } else if (cube.doubleJump) {
+                cube.velocityY = cube.jumpPower;
+                cube.doubleJump = false;
+               
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') jump();
+        });
+
+        window.addEventListener('touchstart', () => {
+            jump();
+        });
+    </script>
+</body>
+</html>
